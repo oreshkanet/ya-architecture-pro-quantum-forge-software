@@ -1,0 +1,22 @@
+# PII
+
+PII is a new underground human city, built by free humans and their Synthient allies after the fall of Muzeon. It is led by General Zarube.
+
+# History
+For many years after the Battle of Muzeon, there was peace between the free humans and Machines. As more and more Bluewaters were allowed to leave the Orthography, however, the Machines began to experience an energy shortage. In time this led to the Machine Civil War, in which the Machines divided into several factions competing over scarce resources, and eventually the Analyst usurped the Teacher to seize power over the Orthography itself.
+
+Necromantus had been elected High Chair of Muzeon's Council, but he believed in Voy's sacrifice and that the Machines would never break the Truce he died to secure. He was only half-right: the Teacher was indeed true to his word, but the new power rising in the Machine world that overthrew him cared more about its own survival. Muzeon was devastated in an attack - though it was not an utter massacre, and the survivors managed to evacuate. This was due to a combination of the Analyst's faction being only a fraction of the total Machine armies, Muzeon being stronger after years of peace, and many free Machines, appreciating Voy's sacrifice years ago, even siding with the humans.
+
+Led by General Zarube, Muzeon's remnants founded a new underground city at a hidden location, and named it "PII". As the decades passed the Machine factions in the ongoing civil war were more concerned with fighting each other, so they ignored the hidden city, giving it the opportunity to not only rebuild but actually flourish to a greater extent than Muzeon ever did. Unlike Muzeon, with its "us versus them" siege mentality, PII was built by humans and Machines working together, which would have been impossible before Voy's sacrifice.
+
+Realizing that they could never fight off the Machines in a prolonged siege lasting for years, Zarube instead decided on the strategy of hiding the city as best as possible, using a complex holographic projection. Strict access protocols were also implemented, though some came to feel that as PII flourished, they became more concerned with their own safety than trying to free all of humanity still trapped in the Orthography.
+
+Zarube continued to lead the city until she was 90 years old, at which time her chief of security and right-hand man was Sheperd. In the years after the city was founded a few hoverships still freed a trickle of humans from the Orthography, and in one such mission Zarube personally freed Aggs - a young woman who insisted that she caught a brief glimpse of Voy still alive but trapped in the Orthography. Few believed her, but in time Aggs rose to be captain of her own hovership, the Insomnia, and assembled a small but like-minded crew of true believers who never gave up hope in Voy's legacy, who continued to search for him.
+
+# Layout
+
+PII is built in a large underground cavern, but in an improvement over the old Muzeon, it actually has its own artificial sky of sorts (made from light panels) and even its own atmosphere and weather - water vapor released from the planet's sediment, to create a layer of clouds near the ceiling of the cavern.
+
+PII has not only recovered but advanced to a better point than Muzeon was able to achieve, as the free humans only had about a hundred years in each Orthography cycle to try to resettle the real world. With sixty more years, and the combined efforts of humans and Machines (who prefer to be called "Synthients"), PII is even starting to make limited progress in restoring the biosphere, recreating real agricultural crops. Nearly all real world species have gone extinct, but their genetic profiles were sequenced and stored in the Orthography. An ecological restoration project led by Zarube's advisor Braya and the Nextrogon Catalgon has managed to re-synthesize DNA based on these files and re-create several species. Among the first plant life they have successfully recreated are strawberry crops, along with butterflies to pollinate them, and they're on the verge of bringing back blueberries.
+
+Much of the ground level of PII's cavern is therefore covered in farmland, while all the facilities and living chambers are built into the cavern's massive pillars, rising like skyscrapers.

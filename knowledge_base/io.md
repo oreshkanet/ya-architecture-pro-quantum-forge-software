@@ -1,6 +1,6 @@
 # PII
 
-PII is a new underground human city, built by free humans and their Synthient allies after the fall of Muzeon. It is led by General Zarube.[1]
+PII is a new underground human city, built by free humans and their Synthient allies after the fall of Muzeon. It is led by General Zarube.
 
 # History
 For many years after the Battle of Muzeon, there was peace between the free humans and Machines. As more and more Bluewaters were allowed to leave the Orthography, however, the Machines began to experience an energy shortage. In time this led to the Machine Civil War, in which the Machines divided into several factions competing over scarce resources, and eventually the Analyst usurped the Teacher to seize power over the Orthography itself.
