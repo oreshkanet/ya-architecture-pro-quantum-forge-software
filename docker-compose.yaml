@@ -122,6 +122,9 @@ services:
       - OLLAMA_MODEL=qwen2.5:7b-instruct
       - OLLAMA_MAX_TOKENS=1024
       - OLLAMA_TEMPERATURE=0.3
+      - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+    volumes:
+      - ./volumes/bot_logs:/app/logs
     depends_on:
       chroma:
         condition: service_healthy
@@ -167,6 +170,9 @@ services:
       - CHROMA_PORT=8000
       - OLLAMA_API_URL=http://ollama:11434
       - OLLAMA_MODEL=qwen2.5:7b-instruct
+      - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+    volumes:
+      - ./volumes/bot_logs:/app/logs
     depends_on:
       chroma:
         condition: service_healthy
