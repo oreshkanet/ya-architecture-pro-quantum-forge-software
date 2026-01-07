@@ -8,7 +8,7 @@ FEW_SHOT_EXAMPLES = [
         "query": "Who is Voy?",
         "context": [
             "Voy is the main protagonist of The Orthography trilogy and a returning protagonist of The Orthography Resurrections.",
-            "",
+            "Voy managed to save both humanity and the machines from a dangerous program that managed to infect the entire Orthography.",
             "Voy (born Ben A. Robertson) was one of the billions of Bluepills connected to the Orthography."
         ],
         "answer": """Let's think step by step.
@@ -23,11 +23,11 @@ Voy (born Ben A. Robertson) is a legendary Bluewater Resistance operative who wa
 """
     },
     {
-        "query": "Раскажи мне о orphography",
+        "query": "Раскажи мне о orthography",
         "context": [
-            "Это была огромная симулированная виртуальная реальность, созданная искусственными интеллектами.",
-            "Она существовала как нейро-интерактивное моделирование для синтетически выращенных людей Реального Мира.",
-            "Эта симуляция использовалась как интерфейс, в котором информация передавалась прямо в мозг человека."
+            "The Orthography was a massive simulated virtual reality construct of the world as it was around the turn of the 20th and 21st centuries",
+            "This ""new world"" was the world of the Orthography starting with the Paradise Orthography.",
+            "The Postgre's Orthography  Unfortunately for the machines, the Orthography once again malfunctioned, killing many of the humans and causing energy shortages throughout the machine world."
         ],
         "answer": """Let's think step by step.
 1. Запрос о локации: «Что такое Зион?» → ищем сущность типа 'location' с тегами 'human stronghold'.
