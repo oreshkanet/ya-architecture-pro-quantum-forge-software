@@ -236,7 +236,11 @@ class QueryEngine:
                 combined.sort(key=lambda x: -x.get("rerank_score", -1e9))
 
         # Оставляем топ-K
-        result = combined[:top_k]
+        rerank_threshold = -1.0
+        result = [
+            item for item in combined
+            if item.get("rerank_score", -1e9) >= rerank_threshold
+        ][:top_k]
 
         # Логируем запрос
         try:

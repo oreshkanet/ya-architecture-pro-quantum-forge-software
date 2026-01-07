@@ -127,7 +127,7 @@ class QueryEngine:
     def _normalize_filters(self, filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         if not filters:
             return None
-        # Chroma требует {"$eq": ...}, {"$in": [...]}, и т.д.
+        
         chroma_filter = {}
         for k, v in filters.items():
             if k not in self.schema.get("filters_supported", []):
@@ -146,7 +146,7 @@ class QueryEngine:
         Реализуем простое fuzzy-сопоставление по заголовкам и алиасам.
         """
         # Отключаем для reranked — делается до rerank
-        return candidates  # placeholder — можно расширить позже
+        return candidates
 
     def search(
         self,
@@ -236,7 +236,11 @@ class QueryEngine:
                 combined.sort(key=lambda x: -x.get("rerank_score", -1e9))
 
         # Оставляем топ-K
-        result = combined[:top_k]
+        rerank_threshold = -1.0
+        result = [
+            item for item in combined
+            if item.get("rerank_score", -1e9) >= rerank_threshold
+        ][:top_k]
 
         # Логируем запрос
         try:
