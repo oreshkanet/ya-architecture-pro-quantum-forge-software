@@ -5,7 +5,7 @@ import time
 import json
 import logging
 from typing import List, Dict, Any, Optional
-from .config import LOG_LEVEL, TOP_K_CONTEXT, MAX_CONTEXT_LEN
+from .config import LOG_LEVEL, TOP_K_CONTEXT, MAX_CONTEXT_LEN, BOT_HISTORY_PATH
 from .retrieval import retrieve_context
 from .prompting import build_prompt
 from .llm_client import OllamaClient
@@ -18,7 +18,7 @@ class RAGBot:
         chroma_port: int = 8000,
         top_k: int = TOP_K_CONTEXT,
         max_context_len: int = MAX_CONTEXT_LEN,
-        log_history_to: Optional[str] = "bot_history.jsonl"
+        log_history_to: Optional[str] = BOT_HISTORY_PATH
     ):
         self.chroma_host = chroma_host
         self.chroma_port = chroma_port

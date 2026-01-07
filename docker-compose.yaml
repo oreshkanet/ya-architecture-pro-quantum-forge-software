@@ -146,6 +146,9 @@ services:
       - OLLAMA_API_URL=http://ollama:11434
       - OLLAMA_MODEL=qwen2.5:7b-instruct
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+    volumes:
+      - ./volumes/bot_logs:/app/logs
     depends_on:
       chroma:
         condition: service_healthy
