@@ -1,0 +1,158 @@
+version: '3.8'
+
+services:
+  # =============== База данных ===============
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./volumes/clickhouse_data:/var/lib/clickhouse
+      - ./volumes/clickhouse_log:/var/log/clickhouse-server
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============== Векторная БД ===============
+  chroma:
+    image: ghcr.io/chroma-core/chroma:1.4.0
+    container_name: chroma
+    ports:
+      - "8000:8000"
+    environment:
+      - IS_PERSISTENT=true
+      - ANONYMIZED_TELEMETRY=false
+      # ClickHouse connection
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      # Storage
+      - PERSISTENT_DIRECTORY=/chroma_data
+    volumes:
+      - ./volumes/chroma_data:/data
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============== Ollama ===============
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama/models
+      - ./volumes/models:/app/models
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Для доступа к GPU (если есть):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # =============== Индексация ===============
+  indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile.indexer  # → см. ниже
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+      - INPUT_DIR=/app/knowledge_base
+    volumes:
+      - ./knowledge_base:/app/knowledge_base:ro
+      - ./volumes:/app/data
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную: `docker-compose run indexer`
+
+  # =============== HTTP API ===============
+  rag_http:
+    build:
+      context: .
+      dockerfile: Dockerfile.http
+    ports:
+      - "8080:8080"
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_API_URL=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:7b-instruct
+      - OLLAMA_MAX_TOKENS=1024
+      - OLLAMA_TEMPERATURE=0.3
+    depends_on:
+      chroma:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============== Telegram Bot ===============
+  rag_telegram:
+    build:
+      context: .
+      dockerfile: Dockerfile.telegram
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_API_URL=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:7b-instruct
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+    depends_on:
+      chroma:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    # Не имеет healthcheck — бот в активном режиме polling
+
+  # =============== Development CLI (опционально) ===============
+  rag_cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.http
+    entrypoint: ["python", "main.py", "--interface", "cli"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_API_URL=http://ollama:11434
+    volumes:
+      - ./knowledge_base:/app/knowledge_base:ro
+    tty: true
+    stdin_open: true
+
+volumes:
+  clickhouse_data:
+  clickhouse_log:
+  chroma_data:
+  ollama_models:

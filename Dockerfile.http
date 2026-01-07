@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Установка зависимостей ОС
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc g++ \
+        python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Копируем зависимости
+COPY src/bot/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копируем код
+COPY src/bot/core/ ./core/
+COPY src/bot/interfaces/ ./interfaces/
+COPY src/bot/tools/ ./tools/
+COPY src/bot/main.py .
+COPY volumes/index_schema.json ./index_schema.json
+
+EXPOSE 8080
+
+CMD ["python", "main.py", "--interface", "http"]

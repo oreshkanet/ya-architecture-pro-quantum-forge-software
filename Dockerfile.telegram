@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Зависимости ОС (минимум)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+# Зависимости Python
+COPY src/bot/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копируем только нужные модули (меньше attack surface)
+COPY src/bot/core/ ./core/
+COPY src/bot/interfaces/ ./interfaces/
+COPY src/bot/tools/ ./tools/
+COPY src/bot/main.py .
+COPY volumes/index_schema.json ./index_schema.json
+
+CMD ["python", "main.py", "--interface", "telegram"]
