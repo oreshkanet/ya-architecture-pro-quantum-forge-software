@@ -77,7 +77,7 @@ services:
   indexer:
     build:
       context: .
-      dockerfile: Dockerfile.indexer  # → см. ниже
+      dockerfile: Dockerfile.indexer
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000

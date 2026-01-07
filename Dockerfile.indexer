@@ -1,4 +1,3 @@
-# Dockerfile.indexer
 FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
 
 # Установка Python и зависимостей
@@ -12,14 +11,7 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Зависимости
-COPY requirements.txt .
+COPY ./src/indexer/ .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Код
-COPY core/ ./core/
-COPY tools/ ./tools/
-COPY indexer.py ./indexer.py
-COPY config.py ./
 
 CMD ["python", "indexer.py"]
