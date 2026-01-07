@@ -89,7 +89,24 @@ services:
     depends_on:
       chroma:
         condition: service_healthy
-    # Запускается вручную: `docker-compose run indexer`
+    # Запускается вручную: `docker-compose run -rm indexer`
+
+  # =============== Запрос контекста ===============
+  query:
+    build:
+      context: .
+      dockerfile: Dockerfile.query
+    entrypoint: ["python", "query.py"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+    volumes:
+      - ./volumes:/app/data
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную: `docker-compose run -rm query "Who is Voy?"`
 
   # =============== HTTP API ===============
   rag_http:
@@ -136,18 +153,22 @@ services:
         condition: service_healthy
     # Не имеет healthcheck — бот в активном режиме polling
 
-  # =============== Development CLI (опционально) ===============
+  # =============== Development CLI ===============
   rag_cli:
     build:
       context: .
-      dockerfile: Dockerfile.http
+      dockerfile: Dockerfile.cli
     entrypoint: ["python", "main.py", "--interface", "cli"]
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - OLLAMA_API_URL=http://ollama:11434
-    volumes:
-      - ./knowledge_base:/app/knowledge_base:ro
+      - OLLAMA_MODEL=qwen2.5:7b-instruct
+    depends_on:
+      chroma:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
     tty: true
     stdin_open: true
 
