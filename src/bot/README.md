@@ -1,11 +1,11 @@
 # Bot
 
 ## CLI
-python main.py --interface cli "Кто такой Тор?" --universe MCU
+python3 main.py --interface cli "Кто такой Voy?" --universe MX
 
 ## HTTP API
-python main.py --interface http
+python3 main.py --interface http
 > http://localhost:8080/ask
 
 ## Telegram
-TELEGRAM_TOKEN=123456:ABC-DEF123 python main.py --interface telegram
+TELEGRAM_TOKEN=123456:ABC-DEF123 python3 main.py --interface telegram
