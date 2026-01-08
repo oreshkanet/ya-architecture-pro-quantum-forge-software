@@ -17,6 +17,7 @@ llama-index-embeddings-huggingface>=0.6.1
 tqdm>=4.66.0
 requests>=2.31.0
 numpy>=1.24.0
+boto3>=1.28.0  # Для работы с S3-совместимыми хранилищами
 
 
 

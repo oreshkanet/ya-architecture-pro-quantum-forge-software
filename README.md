@@ -1,7 +1,6 @@
 # ya-architecture-pro-quantum-forge-software
 Проектная работа 7 спринта курса "Архитектура ПО: продвинутый уровень"
 
-
 ## Первый запуск (с загрузкой моделей)
 
 Поднимаем сервер ollama в docker и загружаем модель
@@ -30,4 +29,9 @@ docker-compose up -d rag_http
 или Telegram
 ```sh
 docker-compose up -d rag_telegram
+```
+
+Поиск контекста по векторной базе:
+```sh
+docker-compose run --rm query "Кто такой Voy?"
 ```

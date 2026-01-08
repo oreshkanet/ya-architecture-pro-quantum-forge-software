@@ -73,23 +73,59 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  # =============== Подготовка базы ===============
+  replacer:
+    build:
+      context: .
+      dockerfile: Dockerfile.replacer
+    entrypoint: ["python", "replacer.py"]
+    env_file:
+      - .env
+    environment:
+      - SOURCE_DIR=/app/knowledge_source
+      - TARGET_DIR=/app/knowledge_prepared
+      - MAP_FILE=/app/knowledge_source/terms_map.json
+      - S3_ENDPOINT_URL=https://storage.yandexcloud.net
+      - S3_REGION=ru-central1
+      - S3_BUCKET_NAME=ya-rag
+      - S3_PREFIX=knowledge_base
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+    volumes:
+      - ./knowledge_source:/app/knowledge_source:ro
+      - ./volumes/knowledge_prepared:/app/knowledge_prepared
+    
+    # Запускается вручную: `docker-compose run replacer --s3-upload`
+
   # =============== Индексация ===============
   indexer:
     build:
       context: .
       dockerfile: Dockerfile.indexer
+    entrypoint: ["python", "indexer.py"]
+    env_file:
+      - .env
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - SCHEMA_PATH=/app/data/index_schema.json
       - INPUT_DIR=/app/knowledge_base
+      - STATE_FILE=/app/data/index_state.json
+      - S3_ENDPOINT_URL=https://storage.yandexcloud.net
+      - S3_REGION=ru-central1
+      - S3_BUCKET_NAME=ya-rag
+      - S3_PREFIX=knowledge_base
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
     volumes:
       - ./knowledge_base:/app/knowledge_base:ro
       - ./volumes:/app/data
     depends_on:
       chroma:
         condition: service_healthy
-    # Запускается вручную: `docker-compose run -rm indexer`
+    # Запускается вручную:
+    # - полная `docker-compose run indexer --mode full --s3-sync`
+    # - инкрементальная `docker-compose run -rm indexer --mode incremental --s3-sync`
 
   # =============== Запрос контекста ===============
   query:
