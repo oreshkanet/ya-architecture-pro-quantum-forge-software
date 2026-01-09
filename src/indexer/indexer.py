@@ -1122,14 +1122,14 @@ def main():
         if args.mode == "full":
             # Полная перестройка индекса
             docs = load_documents(str(input_dir))
-    if not docs:
-        logger.error("Нет документов для индексации")
+            if not docs:
+                logger.error("Нет документов для индексации")
                 sys.exit(1)
 
-    pipeline = create_pipeline()
-    logger.info("🚀 Запуск LlamaIndex ingestion pipeline...")
-    nodes = pipeline.run(documents=docs)
-    logger.info(f"👉 Создано {len(nodes)} чанков")
+            pipeline = create_pipeline()
+            logger.info("🚀 Запуск LlamaIndex ingestion pipeline...")
+            nodes = pipeline.run(documents=docs)
+            logger.info(f"👉 Создано {len(nodes)} чанков")
 
             stats = build_chroma_index_full(nodes, args.chroma_host, args.chroma_port)
             chunks_count = stats.get("chunks_count", 0)

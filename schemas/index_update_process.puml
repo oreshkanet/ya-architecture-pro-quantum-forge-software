@@ -1,0 +1,140 @@
+@startuml index_update_process
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+title Процесс обновления векторного индекса RAG-системы
+
+' ========== Источники данных ==========
+cloud "S3 Bucket\n(Yandex Object Storage)" as s3 #LightBlue
+database "Локальная\nфайловая система" as local_fs #LightGreen
+
+' ========== Планировщик ==========
+component "Планировщик задач" as scheduler {
+  component "Cron\n(Linux/macOS)" as cron #YellowGreen
+  component "Docker Scheduler\n(опционально)" as docker_sched #YellowGreen
+
+  note left of scheduler
+    **Способы запуска:**
+    
+    1. **Вручную:**
+        docker-compose run --rm indexer
+        -–mode incremental --s3-sync
+    
+    2. **Cron (Linux/macOS):**
+        0 2 * * * docker-compose run --rm \\
+        indexer --mode incremental --s3-sync
+    
+    3. **Docker Scheduler:**
+        (настройка через docker-compose)
+    end note
+}
+
+' ========== Скрипт индексации ==========
+component "Indexer Script\n(indexer.py)" as indexer #AliceBlue {
+  component "S3 Sync\n(синхронизация)" as s3_sync #LightCyan
+  component "Document Loader\n(загрузка MD/MDX)" as doc_loader #LightCyan
+  component "State Manager\n(отслеживание изменений)" as state_mgr #LightCyan
+}
+
+' ========== Обработка документов ==========
+component "LlamaIndex Pipeline" as llama_pipeline #LightCoral {
+  component "Hierarchical\nNode Parser" as chunker #LightCyan
+  component "Title Extractor\n(метаданные)" as title_ext #LightCyan
+}
+
+' ========== Генерация эмбеддингов ==========
+component "BGE-M3 Embedder" as embedder #Plum {
+  component "Dense Embeddings\n(1024 dim)" as dense_emb #LightCyan
+  component "Sparse Embeddings\n(lexical weights)" as sparse_emb #LightCyan
+}
+
+' ========== Векторная БД ==========
+database "ChromaDB" as chroma #Plum {
+  component "knowledge_base_dense\n(Dense коллекция)" as dense_col #LightCyan
+  component "knowledge_base_sparse\n(Sparse коллекция)" as sparse_col #LightCyan
+  component "query_log\n(Логи событий)" as query_log #Khaki
+}
+
+' ========== Хранилище состояния ==========
+database "index_state.json\n(состояние файлов)" as state_file #Khaki
+
+' ========== Логирование ==========
+component "Логи" as logs #Khaki {
+  component "Консоль\n(stdout/stderr)" as console_log #LightCyan
+  component "ChromaDB\n(query_log)" as chroma_log #LightCyan
+
+  note left of logs
+    **Логи содержат:**
+    - Время запуска/завершения
+    - Количество новых чанков
+    - Размер итогового индекса
+    - Список ошибок (если есть)
+    - Статистика по файлам
+  end note
+}
+
+' ========== Основной поток данных ==========
+s3 --> indexer : "1. Синхронизация\nновые/изменённые документы"
+local_fs --> indexer : "1. Альтернативный источник"
+
+scheduler --> indexer : "Запуск по расписанию\nили вручную"
+
+indexer --> llama_pipeline : "2. Загруженные документы"
+
+llama_pipeline --> embedder : "3. Разбиение на чанки"
+
+embedder --> chroma : "4. Dense и Sparse эмбеддинги"
+
+' ========== Управление состоянием ==========
+indexer --> state_file : "Чтение состояния\nзагрузка хешей"
+state_file --> indexer : "Сохранение состояния\nобновление хешей"
+
+' ========== Логирование ==========
+indexer --> logs : "Логи процесса\nвремя, статистика, ошибки"
+indexer --> chroma : "События индексации\nметаданные"
+
+' ========== Режимы работы ==========
+note left of indexer
+  **Режимы работы:**
+  
+  **full** (полная перестройка):
+  - Удаление всех коллекций
+  - Создание новых коллекций
+  - Индексация всех документов
+  
+  **incremental** (инкрементальное):
+  - Сравнение хешей файлов
+  - Обновление только изменённых
+  - Удаление устаревших чанков
+end note
+
+' ========== Детали процесса ==========
+note left of llama_pipeline
+  **Чанкинг:**
+  - Иерархический парсинг
+  - Размеры: 512, 256 токенов
+  - Overlap: 64 токена
+  - Минимальная длина: 30 символов
+end note
+
+note left of embedder
+  **Эмбеддинги:**
+  - Модель: BAAI/bge-m3
+  - Dense: 1024 измерения
+  - Sparse: lexical weights
+  - Batch processing
+end note
+
+note left of chroma
+  **ChromaDB:**
+  - Dense коллекция: для векторного поиска
+  - Sparse коллекция: для keyword поиска
+  - Метаданные: source, filename, title,
+    entity_type, universe, tags
+end note
+
+
+
+
+
+@enduml

@@ -189,8 +189,6 @@ FAISS на GPU может быть выгоден, только если у уж
 - **Частота обновления:** регулярный ingestion (400 стр/мес ≈ 13–15/день), но возможны bulk-обновления.
 - **Требования к качеству:** точность (особенно для разработчиков и саппорта), поддержка метаданных (роль, система, тип документа).
 
-Ниже — 4 варианта конфигураций, от минимального до enterprise-ready. Все — self-hosted, т.к. отправка данных во внешние LLM/API неприемлема.
-
 ### Вариант 1: Облачный managed
 
 | Компонент | Рекомендация |
@@ -308,7 +306,7 @@ FAISS на GPU может быть выгоден, только если у уж
 
 ### Итоговая рекомендация
 
-Вариант 4 наиболее сбалансированный и подходящий под требования проекта.
+Рекомендуется реализовать self-hosted, полностью приватный RAG-стек на базе Варианта 4 (сбалансированная конфигурация) — оптимальный баланс производительности, безопасности, функциональности и TCO для текущего объёма и целей (персонализированные ответы, выявление пробелов в документации, поддержка ролей).
 
 | Критерий | Обоснование |
 |--|--|
@@ -320,7 +318,217 @@ FAISS на GPU может быть выгоден, только если у уж
 | Возможности развития | При росте — можно добавить второй L4 или перейти на Qdrant без смены моделей. |
 |||
 
+Технологический стек
+
+| Уровень | Инструмент | Обоснование |
+|--|--|--|
+| Извлечение и препроцессинг | `unstructured[all] + atlassian-python-api + llama-index-readers` | Универсальная загрузка Confluence (с метаданными: пространство, автор, дата), PDF (таблицы, текст), MDX (frontmatter → метаданные). |
+| Разбиение на чанки | LlamaIndex + semantic chunking (SentenceSplitter + MarkdownNodeParser) | Сохраняет иерархию (заголовки → parent/child), chunk size = 512 токенов, overlap = 50 — баланс контекста и точности. |
+| Эмбеддинги | `BAAI/bge-m3` (Hugging Face) → ONNX Runtime + CUDA | Лучший open-source MTEB score (65.7), поддержка dense + sparse → гибридный поиск, критичный для технической документации. |
+| Векторная БД | ChromaDB 0.5+ с ClickHouse backend | Поддержка сложных фильтров по метаданным (role, system, doc_type, updated_at), масштаб до 1M+ документов, SQL-совместимость.|
+| LLM для генерации | `Qwen2.5-7B-Instruct-AWQ` (4-bit) → inference через vLLM | Высокое качество на русском/техническом тексте, укладывается в 6 ГБ VRAM, vLLM обеспечивает низкую задержку и streaming. |
+| RAG-пайплайн | LlamaIndex QueryPipeline с: <br>– MetadataFilter<br>– HyDE (гипотетические документы)<br>– bge-reranker-v2-m3 (CPU)<br>– CRAG (проверка релевантности + fallback при низком confidence) | Повышает precision@5 до ~90%, снижает галлюцинации, автоматически идентифицирует пробелы в БЗ. |
+| API и интеграция | FastAPI + sse-starlette (streaming ответы) + JWT/LDAP-аутентификация | Совместимость с внутренними порталами (Confluence, Bitrix24), UX как у ChatGPT. |
+| Мониторинг и улучшение БЗ | Prometheus + Grafana + Loki<br>— Метрики: empty_results_rate, top_unanswered_queries, p95_latency<br>— Еженедельный отчёт: «Топ-10 запросов без ответа» → Jira-интеграция | Превращает бота в инструмент системного улучшения документации. |
+||||
+
+**Инфраструктура (on-premise)**
+
+| Компонент | Спецификация | Комментарий |
+|--|--|--|
+| CPU | AMD EPYC 7443 (24C/48T) или Intel Xeon Gold 5318Y | Производительность для параллельного ingestion и CPU-задач (rerank, parsing). |
+| RAM | 128 ГБ DDR4 ECC | Запас для Chroma + ClickHouse + кэширования + ОС. |
+| GPU | 1× NVIDIA L4 (24 ГБ VRAM, 72 Вт TDP) | Оптимальна для inference: тихая, passively cooled, поддержка AWQ/INT4/FP16. |
+| Storage | 2× 1 ТБ NVMe SSD (RAID 1) | ~200 ГБ — данные + индексы; резерв под рост на 3+ года. |
+| Сеть | 1 GbE (опционально 10 GbE) | Достаточно для внутреннего трафика. |
+| ОС | Ubuntu 22.04 LTS + Docker + nvidia-container-toolkit | Минималистично, стабильно, совместимо. |
+||||
+
+**Ожидаемые результаты:**
+
+- **Скорость ответа:** 0.8–2.5 сек (включая retrieval + генерацию).
+- **Точность:** precision@5 ≥ 88% (благодаря HyDE + rerank + CRAG).
+- **Покрытие ролей:** фильтрация по audience, system, doc_type — разработчики, саппорт, менеджеры, новички получают релевантные ответы.
+- **Улучшение БЗ:** автоматическое формирование «долга документации» → целевые улучшения вместо реактивных.
+
 # Подготовка базы знаний
 
-https://marvelcinematicuniverse.fandom.com/
+- **Источник:** [https://matrix.fandom.com/](https://matrix.fandom.com/)
+- **Исходные статьи:** ./knowledge_base/source/
+- **Обработанные статьи:** ./knowledge_base/target/
+- **Словарь замены слов:** [./knowledge_base/terms_map.json](./knowledge_base/terms_map.json)
+- **Скрипт замены слов:** [./knowledge_base/replace_texts.py](./knowledge_base/replace_texts.py)
 
+
+```
+SOURCE_DIR="./knowledge_source"
+TARGET_DIR="./knowledge_base"
+MAP_FILE="./knowledge_source/terms_map.json"
+
+python3 ./src/replacer/replacer.py
+```
+
+# Создание векторного индекса базы знаний
+
+## Выбор эмбеддинг-модели
+
+Для преобразования базы знаний в векторный индекс рекомендую использовать:
+
+- Модель: `BAAI/bge-m3`
+- Репозиторий / API: [https://huggingface.co/BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3)
+- Размер эмбеддингов: 1024
+
+Обоснование выбора:
+
+- Поддержка кросс-язычного поиска (ru ↔ en) — модель обучена выравнивать семантическое пространство между языками, что критично для релевантного retrieval.
+- Высокая точность на MTEB — лидер по cross-lingual retrieval, особенно в паре русский–английский.
+- Работает локально — open-weight, без зависимости от внешнего API (важно для корпоративной/конфиденциальной документации).
+- Гибкость размера эмбеддингов — поддерживает Matryoshka (256/512/1024), можно выбрать компромисс между точностью и скоростью.
+- Устойчивость к код-свичингу — корректно обрабатывает смешанные запросы (например, «Как настроить логирование в go-микросервисах через stdout?»).
+- Поддержка dense + sparse retrieval — можно комбинировать подходы для повышения recall (например, для поиска по техническим терминам и общим формулировкам).
+- Оптимальное соотношение «точность / скорость / ресурсы» — тяжелее bge-small, но значительно эффективнее для многоязычного сценария.
+
+Если в будущем добавятся материалы на других языках — `bge-m3` масштабируется без замены модели.
+
+
+## Преобразование текстов в чанки
+
+https://github.com/chroma-core/chroma/pkgs/container/chroma
+
+
+
+Поднимаем векторную БД с бэкендом Clickhouse:
+```sh
+docker compose up -d clickhouse chroma
+```
+
+### Indexer
+
+```sh
+pip3 install -r ./src/indexer/requirements.txt
+```
+
+```sh
+python3 ./src/index/build_index.py
+```
+
+```sh
+docker compose run --rm indexer
+```
+
+
+Каждый чанк будет иметь:
+
+```JSON
+{
+  "source": "/docs/standards/go.md",
+  "filename": "go.md",
+  "file_type": "markdown",
+  "system": "Go Microservices",
+  "doc_type": "standard",
+  "role": ["dev", "architect"],
+  "tags": ["Go", "DevOps"],
+  "updated_at": "2025-12-15T10:23:45Z",
+  "ingested_at": "2026-01-02T08:15:00Z"
+}
+```
+
+Позволяет делать запросы вида:
+
+```python
+collection.query(
+    query_texts=["Как логировать ошибки?"],
+    where={
+        "$and": [
+            {"role": {"$in": ["dev"]}},
+            {"system": "Go Microservices"},
+            {"doc_type": {"$in": ["standard", "guide"]}}
+        ]
+    },
+    n_results=5
+)
+```
+
+### Как использовать query_log для выявления пробелов
+
+В вашем RAG-пайплайне (на FastAPI) добавьте:
+
+```python
+# После генерации ответа
+if not relevant_chunks or max_score < 0.4:  # low confidence
+    chroma_client.get_collection("query_log").add(
+        ids=[str(uuid4())],
+        documents=[query],
+        metadatas=[{
+            "type": "unanswered",
+            "query": query,
+            "user_role": user.role,
+            "system": user.system,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "confidence": max_score,
+        }],
+    )
+```
+
+
+Раз в неделю запускайте отчёт:
+
+```sql
+-- Через ClickHouse напрямую (Chroma хранит всё в CH)
+SELECT
+  query,
+  count(*) AS freq,
+  groupUniqArray(user_role) AS roles
+FROM chroma_embeddings
+WHERE collection_uuid = 'QUERY_LOG_UUID'
+  AND type = 'unanswered'
+  AND timestamp > now() - INTERVAL 7 DAY
+GROUP BY query
+ORDER BY freq DESC
+LIMIT 10
+```
+
+```sh
+# 1. Создайте папку и положите docker-compose.yml
+mkdir rag-env && cd rag-env
+
+# 2. Запустите (сначала только БД + Chroma, чтобы проверить)
+docker compose up -d clickhouse chroma
+
+# 3. Убедитесь, что всё живо
+docker compose logs -f chroma
+# Должно быть: "INFO:     Application startup complete."
+
+# 4. Запустите vLLM (требует GPU)
+docker compose up -d vllm
+
+# 5. Проверьте API vLLM
+curl http://localhost:8001/v1/models
+# → {"object":"list","data":[{"id":"Qwen/Qwen2.5-7B-Instruct-AWQ",...}]}
+```
+
+Структура volumes после запуска
+```
+rag-env/
+├── volumes/
+│   ├── clickhouse_data/   # данные ClickHouse
+│   ├── chroma_data/       # persistent-данные Chroma (метаданные, индексы)
+│   └── huggingface_cache/ # кэш моделей (~15 ГБ для Qwen2.5-7B-AWQ)
+└── docker-compose.yml
+```
+
+
+Тестирование vLLM (после загрузки модели)
+
+```
+curl http://localhost:8001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+    "messages": [
+      {"role": "user", "content": "Привет! Кто ты?"}
+    ],
+    "max_tokens": 100
+  }'
+
+```

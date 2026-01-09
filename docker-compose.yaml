@@ -95,7 +95,7 @@ services:
       - ./knowledge_source:/app/knowledge_source:ro
       - ./volumes/knowledge_prepared:/app/knowledge_prepared
     
-    # Запускается вручную: `docker-compose run replacer --s3-upload`
+    # Запускается вручную: `docker-compose run --rm replacer --s3-upload`
 
   # =============== Индексация ===============
   indexer:
@@ -125,7 +125,7 @@ services:
         condition: service_healthy
     # Запускается вручную:
     # - полная `docker-compose run indexer --mode full --s3-sync`
-    # - инкрементальная `docker-compose run -rm indexer --mode incremental --s3-sync`
+    # - инкрементальная `docker-compose run --rm indexer --mode incremental --s3-sync`
 
   # =============== Запрос контекста ===============
   query:
@@ -142,7 +142,7 @@ services:
     depends_on:
       chroma:
         condition: service_healthy
-    # Запускается вручную: `docker-compose run -rm query "Who is Voy?"`
+    # Запускается вручную: `docker-compose run --rm query "Who is Voy?"`
 
   # =============== HTTP API ===============
   rag_http:
