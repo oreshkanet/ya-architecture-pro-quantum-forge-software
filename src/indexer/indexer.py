@@ -436,6 +436,41 @@ def create_pipeline() -> IngestionPipeline:
 
 # ==================== Index Building ====================
 
+def get_index_size(chroma_host: str, chroma_port: int) -> Dict[str, int]:
+    """Получает размер индекса (количество чанков в коллекциях)."""
+    try:
+        client = chromadb.HttpClient(
+            host=chroma_host,
+            port=chroma_port,
+            settings=Settings(anonymized_telemetry=False),
+        )
+        client.heartbeat()
+        
+        dense_count = 0
+        sparse_count = 0
+        
+        try:
+            kb_dense = client.get_collection(COLLECTION_KB_DENSE)
+            dense_count = kb_dense.count()
+        except NotFoundError:
+            pass
+        
+        try:
+            kb_sparse = client.get_collection(COLLECTION_KB_SPARSE)
+            sparse_count = kb_sparse.count()
+        except NotFoundError:
+            pass
+        
+        return {
+            "dense": dense_count,
+            "sparse": sparse_count,
+            "total": max(dense_count, sparse_count)  # Обычно они равны
+        }
+    except Exception as e:
+        logger.warning(f"Не удалось получить размер индекса: {e}")
+        return {"dense": 0, "sparse": 0, "total": 0}
+
+
 def generate_chunk_ids_and_metadata(nodes: List[BaseNode], source: str) -> Tuple[List[str], List[str], List[Dict]]:
     """Генерирует ID, документы и метаданные для чанков."""
     ids, documents, metadatas = [], [], []
@@ -469,8 +504,14 @@ def build_chroma_index_full(
     nodes: List[BaseNode],
     chroma_host: str,
     chroma_port: int,
-):
-    """Полная перестройка индекса: удаляет старые коллекции и создаёт новые."""
+) -> Dict[str, Any]:
+    """Полная перестройка индекса: удаляет старые коллекции и создаёт новые.
+    
+    Returns:
+        Словарь со статистикой: {"chunks_count": int, "errors": List[str]}
+    """
+    errors = []
+    chunks_count = 0
     try:
         client = chromadb.HttpClient(
             host=chroma_host,
@@ -480,8 +521,10 @@ def build_chroma_index_full(
         client.heartbeat()
         logger.info(f"Подключено к ChromaDB ({chroma_host}:{chroma_port})")
     except Exception as e:
-        logger.error(f"ChromaDB недоступен: {e}")
-        sys.exit(1)
+        error_msg = f"ChromaDB недоступен: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+        return {"chunks_count": 0, "errors": errors}
 
     # Удаление старых коллекций
     for name in [COLLECTION_KB_DENSE, COLLECTION_KB_SPARSE]:
@@ -516,7 +559,9 @@ def build_chroma_index_full(
 
     if not ids:
         logger.warning("Нет чанков для индексации")
-        return
+        return {"chunks_count": 0, "errors": errors}
+    
+    chunks_count = len(ids)
 
     # Batch-кодирование:
     logger.info(f"Кодирование {len(ids)} чанков...")
@@ -524,6 +569,7 @@ def build_chroma_index_full(
     dense_embs_all = []
     sparse_dicts_all = []
 
+    try:
     for i in range(0, len(documents), batch_size):
         batch = documents[i:i + batch_size]
         dense, sparse = embedder.encode(batch)
@@ -532,6 +578,11 @@ def build_chroma_index_full(
         logger.debug(f"{min(i + batch_size, len(documents))}/{len(documents)}")
 
     dense_embs = np.vstack(dense_embs_all)
+    except Exception as e:
+        error_msg = f"Ошибка при кодировании эмбеддингов: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+        return {"chunks_count": 0, "errors": errors}
 
     # Создание коллекций в Chroma для Dense
     kb_dense = client.create_collection(
@@ -546,6 +597,7 @@ def build_chroma_index_full(
     )
 
     # Запись в Chroma — стандартный dense-поиск
+    try:
     for i in range(0, len(ids), batch_size):
         kb_dense.add(
             ids=ids[i:i + batch_size],
@@ -553,8 +605,13 @@ def build_chroma_index_full(
             documents=documents[i:i + batch_size],
             metadatas=metadatas[i:i + batch_size],
         )
+    except Exception as e:
+        error_msg = f"Ошибка при записи в dense коллекцию: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
 
     # Создание коллекций в Chroma для Sparse
+    try:
     kb_sparse = client.create_collection(
         name=COLLECTION_KB_SPARSE,
         metadata={
@@ -578,6 +635,10 @@ def build_chroma_index_full(
             documents=documents[i:i + batch_size],
             metadatas=metadatas_sparse[i:i + batch_size],
         )
+    except Exception as e:
+        error_msg = f"Ошибка при записи в sparse коллекцию: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
 
     logger.info(f"✅ Dense: {len(ids)} чанков в '{COLLECTION_KB_DENSE}'")
     logger.info(f"✅ Sparse: {len(ids)} чанков в '{COLLECTION_KB_SPARSE}'")
@@ -600,6 +661,7 @@ def build_chroma_index_full(
     )
 
     # Экспорт схемы в index_schema.json — для использования в RAG-рантайме.
+    try:
     schema = {
         "domain": "wiki_universe",
         "dense_collection": COLLECTION_KB_DENSE,
@@ -614,6 +676,12 @@ def build_chroma_index_full(
     with open(SCHEMA_PATH, "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=2, ensure_ascii=False)
     logger.info(f"📜 Схема сохранена: {SCHEMA_PATH}")
+    except Exception as e:
+        error_msg = f"Ошибка при сохранении схемы: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+    
+    return {"chunks_count": chunks_count, "errors": errors}
 
 
 def build_chroma_index_incremental(
@@ -623,8 +691,13 @@ def build_chroma_index_incremental(
     chroma_port: int,
     no_delete: bool = False,
     dry_run: bool = False,
-):
-    """Инкрементальное обновление индекса: добавляет новые/изменённые документы, удаляет устаревшие."""
+) -> Dict[str, Any]:
+    """Инкрементальное обновление индекса: добавляет новые/изменённые документы, удаляет устаревшие.
+    
+    Returns:
+        Словарь со статистикой: {"chunks_added": int, "chunks_removed": int, "errors": List[str]}
+    """
+    errors = []
     # Нормализуем входную директорию
     input_dir = Path(input_dir).resolve()
     
@@ -663,8 +736,10 @@ def build_chroma_index_incremental(
             state = converted_state
             logger.info(f"Загружено состояние из {state_file} ({len(state)} файлов)")
         except Exception as e:
-            logger.error(f"Ошибка чтения {state_file}: {e}")
-            sys.exit(1)
+            error_msg = f"Ошибка чтения {state_file}: {e}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+            return {"chunks_added": 0, "chunks_removed": 0, "errors": errors}
 
     # === 2. Сканирование текущих файлов ===
     current_files: Dict[str, Dict] = {}  # relative_path -> {absolute_path, mtime, hash}
@@ -686,8 +761,10 @@ def build_chroma_index_incremental(
                 except Exception as e:
                     logger.warning(f"Пропуск {f}: {e}")
     except Exception as e:
-        logger.error(f"Ошибка сканирования {input_dir}: {e}")
-        sys.exit(1)
+        error_msg = f"Ошибка сканирования {input_dir}: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+        return {"chunks_added": 0, "chunks_removed": 0, "errors": errors}
 
     logger.info(f"Найдено {len(current_files)} документов в {input_dir}")
 
@@ -703,7 +780,7 @@ def build_chroma_index_incremental(
 
     if not (new_files or modified_files or deleted_files):
         logger.info("✅ Нет изменений. Выход.")
-        return
+        return {"chunks_added": 0, "chunks_removed": 0, "errors": errors}
 
     if dry_run:
         logger.info("=== DRY RUN ===")
@@ -713,7 +790,7 @@ def build_chroma_index_incremental(
             logger.info(f"~ MOD: {f}")
         for f in sorted(deleted_files):
             logger.info(f"- DEL: {f}")
-        return
+        return {"chunks_added": 0, "chunks_removed": 0, "errors": errors}
 
     # === 4. Подключение к Chroma ===
     try:
@@ -725,15 +802,19 @@ def build_chroma_index_incremental(
         client.heartbeat()
         logger.info(f"Подключено к ChromaDB ({chroma_host}:{chroma_port})")
     except Exception as e:
-        logger.error(f"ChromaDB недоступен: {e}")
-        sys.exit(1)
+        error_msg = f"ChromaDB недоступен: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+        return {"chunks_added": 0, "chunks_removed": 0, "errors": errors}
 
     try:
         kb_dense = client.get_collection(COLLECTION_KB_DENSE)
         kb_sparse = client.get_collection(COLLECTION_KB_SPARSE)
     except NotFoundError:
-        logger.error(f"Коллекции {COLLECTION_KB_DENSE}/{COLLECTION_KB_SPARSE} не найдены. Запустите с режимом 'full' сначала.")
-        sys.exit(1)
+        error_msg = f"Коллекции {COLLECTION_KB_DENSE}/{COLLECTION_KB_SPARSE} не найдены. Запустите с режимом 'full' сначала."
+        logger.error(error_msg)
+        errors.append(error_msg)
+        return {"chunks_added": 0, "chunks_removed": 0, "errors": errors}
 
     embedder = BGEM3Embedder(device=DEVICE)
     pipeline = create_pipeline()
@@ -875,7 +956,9 @@ def build_chroma_index_incremental(
             logger.info(f"✅ {rel_path} → {len(ids)} чанков")
 
         except Exception as e:
-            logger.error(f"Ошибка обработки {rel_path}: {e}", exc_info=True)
+            error_msg = f"Ошибка обработки {rel_path}: {e}"
+            logger.error(error_msg, exc_info=True)
+            errors.append(error_msg)
 
     # === 7. Обновление состояния ===
     # Сохраняем состояние с относительными путями как ключами
@@ -892,7 +975,9 @@ def build_chroma_index_incremental(
         state_file.write_text(json.dumps(new_state, indent=2, ensure_ascii=False), encoding="utf-8")
         logger.info(f"💾 Состояние сохранено: {state_file}")
     except Exception as e:
-        logger.error(f"Не удалось сохранить {state_file}: {e}")
+        error_msg = f"Не удалось сохранить {state_file}: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
 
     # === 8. Логирование события в Chroma ===
     try:
@@ -911,9 +996,18 @@ def build_chroma_index_incremental(
             }],
         )
     except Exception as e:
-        logger.warning(f"Не удалось записать лог в Chroma: {e}")
+        error_msg = f"Не удалось записать лог в Chroma: {e}"
+        logger.warning(error_msg)
+        errors.append(error_msg)
 
-    logger.info(f"\n🎉 Обновление завершено: +{total_added} чанков, -{total_removed} чанков")
+    return {
+        "chunks_added": total_added,
+        "chunks_removed": total_removed,
+        "new_files": len(new_files),
+        "modified_files": len(modified_files),
+        "deleted_files": len(deleted_files),
+        "errors": errors
+    }
 
 
 # ==================== Main ====================
@@ -974,8 +1068,13 @@ def main():
 
     setup_logging(args.verbose)
     
+    # Время запуска
+    start_time = datetime.now(timezone.utc)
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+    
     mode_str = "полная перестройка" if args.mode == "full" else "инкрементальное обновление"
     logger.info(f"🚀 Запуск индексации (режим: {mode_str}, BGE-m3 hybrid)")
+    logger.info(f"⏰ Время запуска: {start_time_str}")
 
     # Определяем источник данных
     input_dir = args.input
@@ -1018,31 +1117,88 @@ def main():
         sys.exit(1)
 
     # Выполняем индексацию в зависимости от режима
-    if args.mode == "full":
-        # Полная перестройка индекса
-        docs = load_documents(str(input_dir))
+    stats = {}
+    try:
+        if args.mode == "full":
+            # Полная перестройка индекса
+            docs = load_documents(str(input_dir))
     if not docs:
         logger.error("Нет документов для индексации")
-            sys.exit(1)
+                sys.exit(1)
 
     pipeline = create_pipeline()
     logger.info("🚀 Запуск LlamaIndex ingestion pipeline...")
     nodes = pipeline.run(documents=docs)
     logger.info(f"👉 Создано {len(nodes)} чанков")
 
-        build_chroma_index_full(nodes, args.chroma_host, args.chroma_port)
-    logger.info("\n🎉 Индексация завершена.")
-        
-    else:  # incremental
-        # Инкрементальное обновление
-        build_chroma_index_incremental(
-            input_dir=input_dir,
-            state_file=args.state,
-            chroma_host=args.chroma_host,
-            chroma_port=args.chroma_port,
-            no_delete=args.no_delete,
-            dry_run=args.dry_run,
-        )
+            stats = build_chroma_index_full(nodes, args.chroma_host, args.chroma_port)
+            chunks_count = stats.get("chunks_count", 0)
+            
+        else:  # incremental
+            # Инкрементальное обновление
+            stats = build_chroma_index_incremental(
+                input_dir=input_dir,
+                state_file=args.state,
+                chroma_host=args.chroma_host,
+                chroma_port=args.chroma_port,
+                no_delete=args.no_delete,
+                dry_run=args.dry_run,
+            )
+            chunks_count = stats.get("chunks_added", 0)
+    except KeyboardInterrupt:
+        logger.warning("\n⚠️ Прервано пользователем")
+        sys.exit(1)
+    except Exception as e:
+        error_msg = f"Критическая ошибка индексации: {e}"
+        logger.error(error_msg, exc_info=True)
+        stats = {"errors": [error_msg] + stats.get("errors", [])}
+    
+    # Время завершения
+    end_time = datetime.now(timezone.utc)
+    end_time_str = end_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+    duration = end_time - start_time
+    duration_str = f"{duration.total_seconds():.2f} секунд ({duration.total_seconds()/60:.2f} минут)"
+    
+    # Получаем размер итогового индекса
+    index_size = get_index_size(args.chroma_host, args.chroma_port)
+    
+    # Итоговое логирование
+    logger.info("\n" + "="*70)
+    logger.info("📊 ИТОГОВАЯ СТАТИСТИКА ИНДЕКСАЦИИ")
+    logger.info("="*70)
+    logger.info(f"⏰ Время запуска:   {start_time_str}")
+    logger.info(f"⏰ Время завершения: {end_time_str}")
+    logger.info(f"⏱️  Длительность:     {duration_str}")
+    
+    if args.mode == "full":
+        logger.info(f"📝 Новых чанков:     {stats.get('chunks_count', 0)}")
+    else:
+        logger.info(f"➕ Добавлено чанков: {stats.get('chunks_added', 0)}")
+        logger.info(f"➖ Удалено чанков:   {stats.get('chunks_removed', 0)}")
+        logger.info(f"🆕 Новых файлов:     {stats.get('new_files', 0)}")
+        logger.info(f"🔄 Изменённых файлов: {stats.get('modified_files', 0)}")
+        logger.info(f"🗑️ Удалённых файлов: {stats.get('deleted_files', 0)}")
+    
+    logger.info(f"📦 Размер индекса:")
+    logger.info(f"   - Dense коллекция:  {index_size.get('dense', 0)} чанков")
+    logger.info(f"   - Sparse коллекция: {index_size.get('sparse', 0)} чанков")
+    logger.info(f"   - Всего:            {index_size.get('total', 0)} чанков")
+    
+    # Вывод ошибок
+    errors = stats.get("errors", [])
+    if errors:
+        logger.warning(f"\n⚠️  ОБНАРУЖЕНЫ ОШИБКИ ({len(errors)}):")
+        for i, error in enumerate(errors, 1):
+            logger.warning(f"   {i}. {error}")
+    else:
+        logger.info("\n✅ Ошибок не обнаружено")
+    
+    logger.info("="*70)
+    
+    if errors:
+        logger.warning("\n⚠️  Индексация завершена с ошибками")
+    else:
+        logger.info("\n🎉 Индексация успешно завершена")
 
 
 if __name__ == "__main__":
