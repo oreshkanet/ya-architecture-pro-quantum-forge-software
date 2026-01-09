@@ -570,14 +570,14 @@ def build_chroma_index_full(
     sparse_dicts_all = []
 
     try:
-    for i in range(0, len(documents), batch_size):
-        batch = documents[i:i + batch_size]
-        dense, sparse = embedder.encode(batch)
-        dense_embs_all.append(dense)
-        sparse_dicts_all.extend(sparse)
-        logger.debug(f"{min(i + batch_size, len(documents))}/{len(documents)}")
+        for i in range(0, len(documents), batch_size):
+            batch = documents[i:i + batch_size]
+            dense, sparse = embedder.encode(batch)
+            dense_embs_all.append(dense)
+            sparse_dicts_all.extend(sparse)
+            logger.debug(f"{min(i + batch_size, len(documents))}/{len(documents)}")
 
-    dense_embs = np.vstack(dense_embs_all)
+        dense_embs = np.vstack(dense_embs_all)
     except Exception as e:
         error_msg = f"Ошибка при кодировании эмбеддингов: {e}"
         logger.error(error_msg)
@@ -598,13 +598,13 @@ def build_chroma_index_full(
 
     # Запись в Chroma — стандартный dense-поиск
     try:
-    for i in range(0, len(ids), batch_size):
-        kb_dense.add(
-            ids=ids[i:i + batch_size],
-            embeddings=dense_embs[i:i + batch_size].tolist(),
-            documents=documents[i:i + batch_size],
-            metadatas=metadatas[i:i + batch_size],
-        )
+        for i in range(0, len(ids), batch_size):
+            kb_dense.add(
+                ids=ids[i:i + batch_size],
+                embeddings=dense_embs[i:i + batch_size].tolist(),
+                documents=documents[i:i + batch_size],
+                metadatas=metadatas[i:i + batch_size],
+            )
     except Exception as e:
         error_msg = f"Ошибка при записи в dense коллекцию: {e}"
         logger.error(error_msg)
@@ -612,29 +612,29 @@ def build_chroma_index_full(
 
     # Создание коллекций в Chroma для Sparse
     try:
-    kb_sparse = client.create_collection(
-        name=COLLECTION_KB_SPARSE,
-        metadata={
-            "domain": "wiki_universe",
-            "embedding_model": EMBEDDING_MODEL,
-            "embedding_type": "sparse",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        },
-    )
-
-    # Запись в Chroma - Sparse коллекция (хранит sparse как JSON в metadata + документ)
-    metadatas_sparse = []
-    for meta, sparse in zip(metadatas, sparse_dicts_all):
-        top_sparse = dict(sorted(sparse.items(), key=lambda x: -abs(x[1]))[:512])
-        meta["sparse_vec"] = json.dumps(top_sparse, separators=(",", ":"))
-        metadatas_sparse.append(meta)
-
-    for i in range(0, len(ids), batch_size):
-        kb_sparse.add(
-            ids=ids[i:i + batch_size],
-            documents=documents[i:i + batch_size],
-            metadatas=metadatas_sparse[i:i + batch_size],
+        kb_sparse = client.create_collection(
+            name=COLLECTION_KB_SPARSE,
+            metadata={
+                "domain": "wiki_universe",
+                "embedding_model": EMBEDDING_MODEL,
+                "embedding_type": "sparse",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
         )
+
+        # Запись в Chroma - Sparse коллекция (хранит sparse как JSON в metadata + документ)
+        metadatas_sparse = []
+        for meta, sparse in zip(metadatas, sparse_dicts_all):
+            top_sparse = dict(sorted(sparse.items(), key=lambda x: -abs(x[1]))[:512])
+            meta["sparse_vec"] = json.dumps(top_sparse, separators=(",", ":"))
+            metadatas_sparse.append(meta)
+
+        for i in range(0, len(ids), batch_size):
+            kb_sparse.add(
+                ids=ids[i:i + batch_size],
+                documents=documents[i:i + batch_size],
+                metadatas=metadatas_sparse[i:i + batch_size],
+            )
     except Exception as e:
         error_msg = f"Ошибка при записи в sparse коллекцию: {e}"
         logger.error(error_msg)
@@ -662,20 +662,20 @@ def build_chroma_index_full(
 
     # Экспорт схемы в index_schema.json — для использования в RAG-рантайме.
     try:
-    schema = {
-        "domain": "wiki_universe",
-        "dense_collection": COLLECTION_KB_DENSE,
-        "sparse_collection": COLLECTION_KB_SPARSE,
-        "embedding_model": EMBEDDING_MODEL,
-        "reranker_model": RERANKER_MODEL,
-        "metadata_keys": list(metadatas[0].keys()) if metadatas else [],
-        "filters_supported": ["entity_type", "universe", "tags"],
-        "search_modes": ["dense", "sparse", "hybrid_rrf"],
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    with open(SCHEMA_PATH, "w", encoding="utf-8") as f:
-        json.dump(schema, f, indent=2, ensure_ascii=False)
-    logger.info(f"📜 Схема сохранена: {SCHEMA_PATH}")
+        schema = {
+            "domain": "wiki_universe",
+            "dense_collection": COLLECTION_KB_DENSE,
+            "sparse_collection": COLLECTION_KB_SPARSE,
+            "embedding_model": EMBEDDING_MODEL,
+            "reranker_model": RERANKER_MODEL,
+            "metadata_keys": list(metadatas[0].keys()) if metadatas else [],
+            "filters_supported": ["entity_type", "universe", "tags"],
+            "search_modes": ["dense", "sparse", "hybrid_rrf"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        with open(SCHEMA_PATH, "w", encoding="utf-8") as f:
+            json.dump(schema, f, indent=2, ensure_ascii=False)
+        logger.info(f"📜 Схема сохранена: {SCHEMA_PATH}")
     except Exception as e:
         error_msg = f"Ошибка при сохранении схемы: {e}"
         logger.error(error_msg)
