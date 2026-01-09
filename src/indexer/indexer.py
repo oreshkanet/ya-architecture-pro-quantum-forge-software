@@ -1163,7 +1163,7 @@ def main():
     index_size = get_index_size(args.chroma_host, args.chroma_port)
     
     # Итоговое логирование
-    logger.info("\n" + "="*70)
+    logger.info("="*70)
     logger.info("📊 ИТОГОВАЯ СТАТИСТИКА ИНДЕКСАЦИИ")
     logger.info("="*70)
     logger.info(f"⏰ Время запуска:   {start_time_str}")
@@ -1187,18 +1187,56 @@ def main():
     # Вывод ошибок
     errors = stats.get("errors", [])
     if errors:
-        logger.warning(f"\n⚠️  ОБНАРУЖЕНЫ ОШИБКИ ({len(errors)}):")
+        logger.warning(f"⚠️  ОБНАРУЖЕНЫ ОШИБКИ ({len(errors)}):")
         for i, error in enumerate(errors, 1):
             logger.warning(f"   {i}. {error}")
     else:
-        logger.info("\n✅ Ошибок не обнаружено")
+        logger.info("✅ Ошибок не обнаружено")
     
     logger.info("="*70)
     
     if errors:
-        logger.warning("\n⚠️  Индексация завершена с ошибками")
+        logger.warning("⚠️  Индексация завершена с ошибками")
     else:
-        logger.info("\n🎉 Индексация успешно завершена")
+        logger.info("🎉 Индексация успешно завершена")
+
+    # Логирование в JSON-формате
+    # Подготовка данных для логирования
+    log_data = {
+        "event": "indexing_summary",
+        "start_time": start_time_str,
+        "end_time": end_time_str,
+        "duration": duration_str,
+        "mode": args.mode,
+    }
+
+    if args.mode == "full":
+        log_data["chunks_count"] = stats.get("chunks_count", 0)
+    else:
+        log_data.update({
+            "chunks_added": stats.get("chunks_added", 0),
+            "chunks_removed": stats.get("chunks_removed", 0),
+            "new_files": stats.get("new_files", 0),
+            "modified_files": stats.get("modified_files", 0),
+            "deleted_files": stats.get("deleted_files", 0),
+        })
+
+    log_data["index_size"] = {
+        "dense": index_size.get("dense", 0),
+        "sparse": index_size.get("sparse", 0),
+        "total": index_size.get("total", 0),
+    }
+
+    errors = stats.get("errors", [])
+    log_data["errors"] = errors
+    log_data["error_count"] = len(errors)
+
+    if errors:
+        log_data["status"] = "completed_with_errors"
+        logging.warning(json.dumps(log_data, ensure_ascii=False))
+    else:
+        log_data["status"] = "success"
+        logging.info(json.dumps(log_data, ensure_ascii=False))
 
 
 if __name__ == "__main__":
