@@ -159,6 +159,7 @@ services:
       - OLLAMA_MAX_TOKENS=1024
       - OLLAMA_TEMPERATURE=0.3
       - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+      - QUERY_LOG_PATH=./logs/query_analytics.jsonl
     volumes:
       - ./volumes/bot_logs:/app/logs
     depends_on:
@@ -186,6 +187,7 @@ services:
       - OLLAMA_MODEL=qwen2.5:7b-instruct
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+      - QUERY_LOG_PATH=./logs/query_analytics.jsonl
     volumes:
       - ./volumes/bot_logs:/app/logs
     depends_on:
@@ -207,6 +209,7 @@ services:
       - OLLAMA_API_URL=http://ollama:11434
       - OLLAMA_MODEL=qwen2.5:7b-instruct
       - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+      - QUERY_LOG_PATH=./logs/query_analytics.jsonl
     volumes:
       - ./volumes/bot_logs:/app/logs
     depends_on:
