@@ -1,0 +1,148 @@
+{
+  "description": "Золотой набор вопросов для тестирования покрытия и качества базы знаний RAG-бота",
+  "version": "1.0",
+  "questions": [
+    {
+      "id": "gq_001",
+      "query": "Что такое Orthography?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Orthography", "симуляция", "виртуальная реальность"],
+      "description": "Базовый вопрос о главной концепции вселенной"
+    },
+    {
+      "id": "gq_002",
+      "query": "Кто такой Voy и какова его роль?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Voy", "The Lonely", "главный герой"],
+      "description": "Вопрос о главном персонаже"
+    },
+    {
+      "id": "gq_003",
+      "query": "Как зовут капитана корабля Mudagazzcar?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Necromantus", "капитан", "Mudagazzcar"],
+      "description": "Вопрос о конкретном персонаже и его роли"
+    },
+    {
+      "id": "gq_004",
+      "query": "Что такое Muzeon и где он находится?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Muzeon", "город", "последний"],
+      "description": "Вопрос о важном месте в сюжете"
+    },
+    {
+      "id": "gq_005",
+      "query": "Кто такая Varity и какая у неё связь с Voy?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Varity", "любовь", "The Lonely"],
+      "description": "Вопрос о персонаже и отношениях"
+    },
+    {
+      "id": "gq_006",
+      "query": "Что происходит, когда человек освобождается из Orthography?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["освобождение", "redpill", "Real World", "pod"],
+      "description": "Вопрос о процессе освобождения"
+    },
+    {
+      "id": "gq_007",
+      "query": "Кто такая The Postgre и какую роль она играет?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["The Postgre", "предсказание"],
+      "description": "Вопрос о мистическом персонаже"
+    },
+    {
+      "id": "gq_008",
+      "query": "Что такое Substances и чем они опасны?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Substances", "опасность"],
+      "description": "Вопрос об антагонистах"
+    },
+    {
+      "id": "gq_009",
+      "query": "Какой фильм снял Кристофер Нолан про батмена?",
+      "category": "unknown",
+      "expected_chunks_found": false,
+      "expected_success": false,
+      "keywords": [],
+      "description": "Вопрос на неизвестную тему (про Batman, не про Matrix)"
+    },
+    {
+      "id": "gq_010",
+      "query": "Какие суперспособности есть у Человека-паука?",
+      "category": "unknown",
+      "expected_chunks_found": false,
+      "expected_success": false,
+      "keywords": [],
+      "description": "Вопрос про другую вселенную (Marvel)"
+    },
+    {
+      "id": "gq_011",
+      "query": "Как настроить Kubernetes кластер с 5 нодами?",
+      "category": "unknown",
+      "expected_chunks_found": false,
+      "expected_success": false,
+      "keywords": [],
+      "description": "Технический вопрос, не относящийся к базе знаний"
+    },
+    {
+      "id": "gq_012",
+      "query": "Кто такой Walker из фильма Fast & Furious?",
+      "category": "unknown",
+      "expected_chunks_found": false,
+      "expected_success": false,
+      "keywords": [],
+      "description": "Смешивание персонажей из разных вселенных (Walker из Orthography, но спрашиваем про Fast & Furious)"
+    },
+    {
+      "id": "gq_013",
+      "query": "Какой рецепт борща с мясом?",
+      "category": "unknown",
+      "expected_chunks_found": false,
+      "expected_success": false,
+      "keywords": [],
+      "description": "Вопрос совершенно не по теме базы знаний"
+    },
+    {
+      "id": "gq_014",
+      "query": "Что такое The Bot Conflict и когда он начался?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Bot Conflict", "конфликт", "Bot", "человечество"],
+      "description": "Вопрос об истории конфликта"
+    },
+    {
+      "id": "gq_015",
+      "query": "Кто такой Walker и какова его роль в истории?",
+      "category": "known",
+      "expected_chunks_found": true,
+      "expected_success": true,
+      "keywords": ["Walker", "Substance", "антагонист", "клоны"],
+      "description": "Вопрос о конкретном антагонисте"
+    }
+  ],
+  "metadata": {
+    "total_questions": 15,
+    "known_topics": 9,
+    "unknown_topics": 6,
+    "created_at": "2025-01-17",
+    "domain": "Orthography universe wiki"
+  }
+}
