@@ -18,11 +18,13 @@ component "Планировщик задач" as scheduler {
     
     1. **Вручную:**
         docker-compose run --rm indexer
-        -–mode incremental --s3-sync
+          --mode incremental 
+          --s3-sync
     
     2. **Cron (Linux/macOS):**
-        0 2 * * * docker-compose run --rm \\
-        indexer --mode incremental --s3-sync
+        0 2 * * * docker-compose run --rm indexer 
+          --mode incremental 
+          --s3-sync
     
     3. **Docker Scheduler:**
         (настройка через docker-compose)
@@ -31,28 +33,80 @@ component "Планировщик задач" as scheduler {
 
 ' ========== Скрипт индексации ==========
 component "Indexer Script\n(indexer.py)" as indexer #AliceBlue {
-  component "S3 Sync\n(синхронизация)" as s3_sync #LightCyan
-  component "Document Loader\n(загрузка MD/MDX)" as doc_loader #LightCyan
-  component "State Manager\n(отслеживание изменений)" as state_mgr #LightCyan
+    component "Main" as indexer_main #LightCyan
+    component "S3 Sync\n(синхронизация)" as s3_sync #LightCyan
+    component "Document Loader\n(загрузка MD/MDX)" as doc_loader #LightCyan
+    component "State Manager\n(отслеживание изменений)" as state_mgr #LightCyan
+
+    note left of indexer_main
+        **Режимы работы:**
+        
+        **full** (полная перестройка):
+        - Удаление всех коллекций
+        - Создание новых коллекций
+        - Индексация всех документов
+        
+        **incremental** (инкрементальное):
+        - Сравнение хешей файлов
+        - Обновление только изменённых
+        - Удаление устаревших чанков
+    end note
 }
 
 ' ========== Обработка документов ==========
 component "LlamaIndex Pipeline" as llama_pipeline #LightCoral {
-  component "Hierarchical\nNode Parser" as chunker #LightCyan
-  component "Title Extractor\n(метаданные)" as title_ext #LightCyan
+    component "Pipeline Func" as llama_pipeline_func #LightCyan
+    component "Hierarchical\nNode Parser" as chunker #LightCyan
+    component "Title Extractor\n(метаданные)" as title_ext #LightCyan
+
+    llama_pipeline_func -- chunker
+    llama_pipeline_func -- title_ext
+
+    note left of llama_pipeline_func
+        **Чанкинг:**
+        - Иерархический парсинг
+        - Размеры: 512, 256 токенов
+        - Overlap: 64 токена
+        - Минимальная длина: 30 символов
+    end note
 }
 
 ' ========== Генерация эмбеддингов ==========
 component "BGE-M3 Embedder" as embedder #Plum {
-  component "Dense Embeddings\n(1024 dim)" as dense_emb #LightCyan
-  component "Sparse Embeddings\n(lexical weights)" as sparse_emb #LightCyan
+    component "Embedder Func" as embedder_func #LightCyan
+    component "Dense Embeddings\n(1024 dim)" as dense_emb #LightCyan
+    component "Sparse Embeddings\n(lexical weights)" as sparse_emb #LightCyan
+
+    embedder_func -- dense_emb
+    embedder_func -- sparse_emb
+
+    note left of embedder_func
+        **Эмбеддинги:**
+        - Модель: BAAI/bge-m3
+        - Dense: 1024 измерения
+        - Sparse: lexical weights
+        - Batch processing
+    end note
 }
 
 ' ========== Векторная БД ==========
 database "ChromaDB" as chroma #Plum {
-  component "knowledge_base_dense\n(Dense коллекция)" as dense_col #LightCyan
-  component "knowledge_base_sparse\n(Sparse коллекция)" as sparse_col #LightCyan
-  component "query_log\n(Логи событий)" as query_log #Khaki
+    component "ChromaDB API" as chroma_api #LightCyan
+    component "knowledge_base_dense\n(Dense коллекция)" as dense_col #LightCyan
+    component "knowledge_base_sparse\n(Sparse коллекция)" as sparse_col #LightCyan
+    component "query_log\n(Логи событий)" as query_log #Khaki
+
+    chroma_api --> dense_col
+    chroma_api --> sparse_col
+    chroma_api --> query_log
+
+    note left of chroma_api
+        **ChromaDB:**
+        - Dense коллекция: для векторного поиска
+        - Sparse коллекция: для keyword поиска
+        - Метаданные: source, filename, title,
+            entity_type, universe, tags
+    end note
 }
 
 ' ========== Хранилище состояния ==========
@@ -60,10 +114,14 @@ database "index_state.json\n(состояние файлов)" as state_file #Kh
 
 ' ========== Логирование ==========
 component "Логи" as logs #Khaki {
+  component "Logs Func" as logs_func #LightCyan
   component "Консоль\n(stdout/stderr)" as console_log #LightCyan
   component "ChromaDB\n(query_log)" as chroma_log #LightCyan
 
-  note left of logs
+  logs_func -- console_log
+  logs_func -- chroma_log
+
+  note left of logs_func
     **Логи содержат:**
     - Время запуска/завершения
     - Количество новых чанков
@@ -74,67 +132,23 @@ component "Логи" as logs #Khaki {
 }
 
 ' ========== Основной поток данных ==========
-s3 --> indexer : "1. Синхронизация\nновые/изменённые документы"
-local_fs --> indexer : "1. Альтернативный источник"
+s3 --> s3_sync : "1. Синхронизация\nновые/изменённые документы"
+local_fs --> doc_loader : "1. Альтернативный источник"
 
-scheduler --> indexer : "Запуск по расписанию\nили вручную"
+scheduler --> indexer_main : "Запуск по расписанию\nили вручную"
 
-indexer --> llama_pipeline : "2. Загруженные документы"
+indexer --> llama_pipeline_func : "2. Загруженные документы"
 
-llama_pipeline --> embedder : "3. Разбиение на чанки"
+llama_pipeline --> embedder_func : "3. Разбиение на чанки"
 
-embedder --> chroma : "4. Dense и Sparse эмбеддинги"
+embedder --> chroma_api : "4. Dense и Sparse эмбеддинги"
 
 ' ========== Управление состоянием ==========
-indexer --> state_file : "Чтение состояния\nзагрузка хешей"
-state_file --> indexer : "Сохранение состояния\nобновление хешей"
+state_file <-- state_mgr : "Чтение состояния\nзагрузка хешей"
+state_mgr <-- state_file : "Сохранение состояния\nобновление хешей"
 
 ' ========== Логирование ==========
 indexer --> logs : "Логи процесса\nвремя, статистика, ошибки"
-indexer --> chroma : "События индексации\nметаданные"
-
-' ========== Режимы работы ==========
-note left of indexer
-  **Режимы работы:**
-  
-  **full** (полная перестройка):
-  - Удаление всех коллекций
-  - Создание новых коллекций
-  - Индексация всех документов
-  
-  **incremental** (инкрементальное):
-  - Сравнение хешей файлов
-  - Обновление только изменённых
-  - Удаление устаревших чанков
-end note
-
-' ========== Детали процесса ==========
-note left of llama_pipeline
-  **Чанкинг:**
-  - Иерархический парсинг
-  - Размеры: 512, 256 токенов
-  - Overlap: 64 токена
-  - Минимальная длина: 30 символов
-end note
-
-note left of embedder
-  **Эмбеддинги:**
-  - Модель: BAAI/bge-m3
-  - Dense: 1024 измерения
-  - Sparse: lexical weights
-  - Batch processing
-end note
-
-note left of chroma
-  **ChromaDB:**
-  - Dense коллекция: для векторного поиска
-  - Sparse коллекция: для keyword поиска
-  - Метаданные: source, filename, title,
-    entity_type, universe, tags
-end note
-
-
-
-
+chroma_log --> chroma_api : "События индексации\nметаданные"
 
 @enduml
