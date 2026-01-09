@@ -19,6 +19,7 @@ MAX_CONTEXT_LEN = int(os.getenv("MAX_CONTEXT_LEN", "4096"))
 # === Logging ===
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 BOT_HISTORY_PATH = os.getenv("BOT_HISTORY_PATH", "bot_history.jsonl")
+QUERY_LOG_PATH = os.getenv("QUERY_LOG_PATH", "query_analytics.jsonl")
 
 # === Telegram ===
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")

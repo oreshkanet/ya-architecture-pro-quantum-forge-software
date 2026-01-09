@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from core.bot import RAGBot
 from core.config import CHROMA_HOST, CHROMA_PORT
-
+from chromadb import HttpClient
+from chromadb.config import Settings
 
 app = FastAPI(title="Wiki RAG Bot API", version="1.0")
 
@@ -18,7 +19,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-bot = RAGBot(chroma_host=CHROMA_HOST, chroma_port=CHROMA_PORT)
+# Инициализация ChromaDB клиента для логирования (опционально)
+try:
+    chroma_client = HttpClient(
+        host=CHROMA_HOST,
+        port=CHROMA_PORT,
+        settings=Settings(anonymized_telemetry=False),
+    )
+    chroma_client.heartbeat()
+except Exception:
+    chroma_client = None  # Логирование в ChromaDB отключено, если недоступен
+
+bot = RAGBot(
+    chroma_host=CHROMA_HOST,
+    chroma_port=CHROMA_PORT,
+    enable_query_logging=True,
+    chroma_client=chroma_client,
+)
 
 
 class AskRequest(BaseModel):

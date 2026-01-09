@@ -5,10 +5,11 @@ import time
 import json
 import logging
 from typing import List, Dict, Any, Optional
-from .config import LOG_LEVEL, TOP_K_CONTEXT, MAX_CONTEXT_LEN, BOT_HISTORY_PATH
+from .config import LOG_LEVEL, TOP_K_CONTEXT, MAX_CONTEXT_LEN, BOT_HISTORY_PATH, QUERY_LOG_PATH
 from .retrieval import retrieve_context
 from .prompting import build_prompt
 from .llm_client import OllamaClient
+from .query_logger import QueryLogger
 
 
 class RAGBot:
@@ -18,7 +19,10 @@ class RAGBot:
         chroma_port: int = 8000,
         top_k: int = TOP_K_CONTEXT,
         max_context_len: int = MAX_CONTEXT_LEN,
-        log_history_to: Optional[str] = BOT_HISTORY_PATH
+        log_history_to: Optional[str] = BOT_HISTORY_PATH,
+        enable_query_logging: bool = True,
+        query_log_path: Optional[str] = None,
+        chroma_client=None,
     ):
         self.chroma_host = chroma_host
         self.chroma_port = chroma_port
@@ -28,6 +32,16 @@ class RAGBot:
         self.client = OllamaClient()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(getattr(logging, LOG_LEVEL.upper()))
+        
+        # Настройка логирования запросов для аналитики
+        self.query_logger = None
+        if enable_query_logging:
+            log_path = query_log_path or QUERY_LOG_PATH
+            self.query_logger = QueryLogger(
+                log_file=log_path,
+                log_to_chroma=(chroma_client is not None),
+                chroma_client=chroma_client,
+            )
 
     def ask(
         self,
@@ -66,9 +80,19 @@ class RAGBot:
             }
         }
 
-        # 4. Log history
+        # 4. Log history (старое логирование)
         if self.log_history_to:
             self._log_to_file(result)
+
+        # 5. Расширенное логирование для аналитики
+        if self.query_logger:
+            self.query_logger.log_query(
+                query=query,
+                answer=answer,
+                chunks=chunks,
+                timing=result["timing"],
+                filters=filters,
+            )
 
         return result
 
