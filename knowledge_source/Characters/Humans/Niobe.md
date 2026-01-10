@@ -1,0 +1,9 @@
+# Niobe
+
+Niobe is a member of the Resistance and the captain of both the Logos and the Logos II. She served on the Logos with her first mate Ghost and operator Sparks.
+
+Niobe was once romantically involved with Morpheus, but after he visited the Oracle and dedicated his life to finding the One, they drifted apart. After breaking up with Morpheus, Niobe eventually became involved with Jason Lock. However, she is still in love with Morpheus. During her time with the Resistance, she successfully piloted a hovercraft through mechanical lines (extremely narrow tunnels used by the Machines in the Real World), something that no other member of the Resistance has been able to do.
+
+After finding out that Thadeus left a box within the Matrix before his ship crashed, Niobe decides that they should jack in and go retrieve it. While both Ghost and Sparks have reservations about this plan, Niobe believes that the contents of that box are extremely important given the fact that Thadeus has never used the method before, a risky emergency broadcast drop. The box is located within a heavily guarded post office but they are able to get it. After they retrieve the package, Niobe drives with Ghost to an exit located on the rooftop of a building. On their way to the exit they encounter Agent Johnson blocking the telephone. After narrowly avoiding Agent Johnson, they manage to exit the Matrix.
+
+The disk, held within the box, contained the last transmission of the Osiris before it was destroyed and its crew killed. Thadeus explained that they ran into an army of Sentinels just above Zion, tunneling to the city with Diggers. Niobe orders that the data be transmitted to Zion. After Commander Lock views the data, he contacts the Logos and orders that Niobe lead a full recall of all the ships, returning them to Zion.
