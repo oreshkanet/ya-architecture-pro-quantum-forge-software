@@ -84,7 +84,7 @@ services:
     environment:
       - SOURCE_DIR=/app/knowledge_source
       - TARGET_DIR=/app/knowledge_prepared
-      - MAP_FILE=/app/knowledge_source/terms_map.json
+      - MAP_FILE=/app/knowledge_config/terms_map.json
       - S3_ENDPOINT_URL=https://storage.yandexcloud.net
       - S3_REGION=ru-central1
       - S3_BUCKET_NAME=ya-rag
@@ -93,6 +93,7 @@ services:
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
     volumes:
       - ./knowledge_source:/app/knowledge_source:ro
+      - ./knowledge_config:/app/knowledge_config:ro
       - ./volumes/knowledge_prepared:/app/knowledge_prepared
     
     # Запускается вручную: `docker-compose run --rm replacer --s3-upload`

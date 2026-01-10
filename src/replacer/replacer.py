@@ -40,6 +40,16 @@ def replace_in_text(text: str, replacements: dict, whole_words: bool = False) ->
             text = text.replace(old, new)
     return text
 
+def replace_in_path(text: Path, replacements: dict, whole_words: bool = False) -> Path:
+    path_str = str(text)
+    for old, new in replacements.items():
+        if whole_words:
+            pattern = r'\b' + re.escape(old) + r'\b'
+            path_str = re.sub(pattern, new, path_str)
+        else:
+            path_str = path_str.replace(old, new)
+    return Path(path_str)
+
 
 def compute_file_hash(filepath: Path) -> str:
     """Вычисляет MD5 хеш файла (совместим с S3 ETag для небольших файлов)."""
@@ -247,7 +257,9 @@ def main():
         found_any = True
 
         rel_path = filepath.relative_to(SOURCE_DIR)
-        target_file = TARGET_DIR / rel_path
+        target_path = replace_in_path(rel_path, replacements, False)
+
+        target_file = TARGET_DIR / target_path
         target_file.parent.mkdir(parents=True, exist_ok=True)
 
         try:
