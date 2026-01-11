@@ -173,11 +173,11 @@ services:
       - CHROMA_PORT=8000
       - SCHEMA_PATH=/app/data/index_schema.json
     volumes:
-      - ./volumes:/app/data
+      - ./volumes/bot_logs:/app/logs
     depends_on:
       chroma:
         condition: service_healthy
-    # Запускается вручную: `docker-compose run --rm analyzer --days 30`
+    # Запускается вручную: `docker-compose run --rm analyzer --log-file logs/query_analytics.jsonl --days 30`
 
 
   # =============== HTTP API ===============
