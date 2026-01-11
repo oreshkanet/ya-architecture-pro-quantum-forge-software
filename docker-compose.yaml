@@ -145,6 +145,41 @@ services:
         condition: service_healthy
     # Запускается вручную: `docker-compose run --rm query "Who is Voy?"`
 
+# =============== Тестирование бота ===============
+  tester:
+    build:
+      context: .
+      dockerfile: Dockerfile.tester
+    entrypoint: ["python", "tester.py"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+    volumes:
+      - ./volumes:/app/data
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную: `docker-compose run --rm tester`
+
+# =============== Анализ логов ===============
+  analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile.analyzer
+    entrypoint: ["python", "analyzer.py"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+    volumes:
+      - ./volumes:/app/data
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную: `docker-compose run --rm analyzer --days 30`
+
+
   # =============== HTTP API ===============
   rag_http:
     build:
