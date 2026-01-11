@@ -8,6 +8,5 @@ RUN apt-get update && \
 WORKDIR /app
 
 COPY ./src/analyzer/ .
-RUN pip install --no-cache-dir -r requirements.txt
 
 CMD ["python", "analyzer.py"]
