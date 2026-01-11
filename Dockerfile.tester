@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+
+# Установка Python и зависимостей
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc g++ python3-dev zlib1g-dev
+
+WORKDIR /app
+
+COPY ./src/tester/ ./tester/
+COPY ./src/bot/ ./bot/
+RUN pip install --no-cache-dir -r ./tester/requirements.txt
+
+CMD ["python", "tester/tester.py"]

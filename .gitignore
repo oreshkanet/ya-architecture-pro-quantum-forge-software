@@ -1,0 +1,12 @@
+__pycache__
+.pytest_cache
+.vscode
+models
+tmp
+.env
+.DS_Store
+volumes/chroma_data
+volumes/clickhouse_data
+volumes/clickhouse_log
+volumes/knowledge_prepared
+volumes/models

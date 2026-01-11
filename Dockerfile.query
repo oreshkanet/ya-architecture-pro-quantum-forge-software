@@ -1,0 +1,13 @@
+FROM python:3.12-slim
+
+# Установка Python и зависимостей
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc g++ python3-dev zlib1g-dev
+
+WORKDIR /app
+
+COPY ./src/query/ .
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "query.py", "arg1", "arg2"]

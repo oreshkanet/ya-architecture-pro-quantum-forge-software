@@ -1,0 +1,266 @@
+version: '3.8'
+
+services:
+  # =============== База данных ===============
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./volumes/clickhouse_data:/var/lib/clickhouse
+      - ./volumes/clickhouse_log:/var/log/clickhouse-server
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============== Векторная БД ===============
+  chroma:
+    image: ghcr.io/chroma-core/chroma:1.4.0
+    container_name: chroma
+    ports:
+      - "8000:8000"
+    environment:
+      - IS_PERSISTENT=true
+      - ANONYMIZED_TELEMETRY=false
+      # ClickHouse connection
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      # Storage
+      - PERSISTENT_DIRECTORY=/chroma_data
+    volumes:
+      - ./volumes/chroma_data:/data
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============== Ollama ===============
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama/models
+      - ./volumes/models:/app/models
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Для доступа к GPU (если есть):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # =============== Подготовка базы ===============
+  replacer:
+    build:
+      context: .
+      dockerfile: Dockerfile.replacer
+    entrypoint: ["python", "replacer.py"]
+    env_file:
+      - .env
+    environment:
+      - SOURCE_DIR=/app/knowledge_source
+      - TARGET_DIR=/app/knowledge_prepared
+      - MAP_FILE=/app/knowledge_config/terms_map.json
+      - S3_ENDPOINT_URL=https://storage.yandexcloud.net
+      - S3_REGION=ru-central1
+      - S3_BUCKET_NAME=ya-rag
+      - S3_PREFIX=knowledge_base
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+    volumes:
+      - ./knowledge_source:/app/knowledge_source:ro
+      - ./knowledge_config:/app/knowledge_config:ro
+      - ./volumes/knowledge_prepared:/app/knowledge_prepared
+    
+    # Запускается вручную: `docker-compose run --rm replacer --s3-upload`
+
+  # =============== Индексация ===============
+  indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile.indexer
+    entrypoint: ["python", "indexer.py"]
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+      - INPUT_DIR=/app/knowledge_base
+      - STATE_FILE=/app/data/index_state.json
+      - S3_ENDPOINT_URL=https://storage.yandexcloud.net
+      - S3_REGION=ru-central1
+      - S3_BUCKET_NAME=ya-rag
+      - S3_PREFIX=knowledge_base
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+    volumes:
+      - ./knowledge_base:/app/knowledge_base:ro
+      - ./volumes:/app/data
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную:
+    # - полная `docker-compose run indexer --mode full --s3-sync`
+    # - инкрементальная `docker-compose run --rm indexer --mode incremental --s3-sync`
+
+  # =============== Запрос контекста ===============
+  query:
+    build:
+      context: .
+      dockerfile: Dockerfile.query
+    entrypoint: ["python", "query.py"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+    volumes:
+      - ./volumes:/app/data
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную: `docker-compose run --rm query "Who is Voy?"`
+
+# =============== Тестирование бота ===============
+  tester:
+    build:
+      context: .
+      dockerfile: Dockerfile.tester
+    entrypoint: ["python", "tester/tester.py"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+    volumes:
+      - ./knowledge_config:/app/tests:ro
+      - ./volumes:/app/data
+      - ./volumes/tester:/app/result
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную: `docker-compose run --rm tester --results /app/result/test_result.json`
+
+# =============== Анализ логов ===============
+  analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile.analyzer
+    entrypoint: ["python", "analyzer/analyzer.py"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - SCHEMA_PATH=/app/data/index_schema.json
+    volumes:
+      - ./volumes/bot_logs:/app/logs
+    depends_on:
+      chroma:
+        condition: service_healthy
+    # Запускается вручную: `docker-compose run --rm analyzer --log-file logs/query_analytics.jsonl --days 30`
+
+
+  # =============== HTTP API ===============
+  rag_http:
+    build:
+      context: .
+      dockerfile: Dockerfile.http
+    ports:
+      - "8080:8080"
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_API_URL=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:7b-instruct
+      - OLLAMA_MAX_TOKENS=1024
+      - OLLAMA_TEMPERATURE=0.3
+      - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+      - QUERY_LOG_PATH=./logs/query_analytics.jsonl
+    volumes:
+      - ./volumes/bot_logs:/app/logs
+    depends_on:
+      chroma:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============== Telegram Bot ===============
+  rag_telegram:
+    build:
+      context: .
+      dockerfile: Dockerfile.telegram
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_API_URL=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:7b-instruct
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+      - QUERY_LOG_PATH=./logs/query_analytics.jsonl
+      - SECURITY_ENABLED=true
+    volumes:
+      - ./volumes/bot_logs:/app/logs
+    depends_on:
+      chroma:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    # Не имеет healthcheck — бот в активном режиме polling
+
+  # =============== Development CLI ===============
+  rag_cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    entrypoint: ["python", "main.py", "--interface", "cli"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_API_URL=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:7b-instruct
+      - BOT_HISTORY_PATH=./logs/bot_history.jsonl
+      - QUERY_LOG_PATH=./logs/query_analytics.jsonl
+    volumes:
+      - ./volumes/bot_logs:/app/logs
+    depends_on:
+      chroma:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    tty: true
+    stdin_open: true
+
+volumes:
+  clickhouse_data:
+  clickhouse_log:
+  chroma_data:
+  ollama_models:

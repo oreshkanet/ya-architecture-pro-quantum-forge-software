@@ -1,0 +1,24 @@
+# Core
+requests
+chromadb>=1.4.0,<2.0
+torch>=2.1.0
+transformers>=4.40.0
+numpy>=1.24.0
+
+# Embeddings & Reranker
+FlagEmbedding==1.2.11
+peft>=0.10.0
+sentencepiece>=0.2.0
+accelerate>=0.27.0
+
+# Ingestion (indexer)
+llama-index-core==0.14.12
+llama-index-readers-file==0.5.6
+
+# Interfaces
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+aiogram==3.24.0
+
+# CLI (опционально)
+rich==13.9.2

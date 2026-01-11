@@ -1,0 +1,31 @@
+{
+  "domain": "wiki_universe",
+  "dense_collection": "knowledge_base_dense",
+  "sparse_collection": "knowledge_base_sparse",
+  "embedding_model": "BAAI/bge-m3",
+  "reranker_model": "BAAI/bge-reranker-v2-m3",
+  "metadata_keys": [
+    "source",
+    "filename",
+    "title",
+    "canonical_name",
+    "aliases",
+    "entity_type",
+    "universe",
+    "tags",
+    "chunk_type",
+    "ingested_at",
+    "sparse_vec"
+  ],
+  "filters_supported": [
+    "entity_type",
+    "universe",
+    "tags"
+  ],
+  "search_modes": [
+    "dense",
+    "sparse",
+    "hybrid_rrf"
+  ],
+  "created_at": "2026-01-10T19:08:12.159095+00:00"
+}

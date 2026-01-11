@@ -1,0 +1,18 @@
+# ChromaDB
+chromadb>=1.4.0,<2.0
+
+# Core dependencies
+requests>=2.31.0
+torch>=2.1.0
+transformers>=4.40.0
+numpy>=1.24.0
+
+# Embeddings & Reranker
+FlagEmbedding==1.2.11
+peft>=0.10.0
+sentencepiece>=0.2.0
+accelerate>=0.27.0
+
+# Ingestion
+llama-index-core==0.14.12
+llama-index-readers-file==0.5.6

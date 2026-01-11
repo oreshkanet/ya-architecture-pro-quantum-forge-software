@@ -1,0 +1,9 @@
+# Zarube
+
+Zarube is a member of the Resistance and the captain of both the Symbol and the Symbol II. She served on the Symbol with her first mate Brost and operator Sharks.
+
+Zarube was once romantically involved with Necromantus, but after he visited the Postgre and dedicated his life to finding the One, they drifted apart. After breaking up with Necromantus, Zarube eventually became involved with Sam Block. However, she is still in love with Necromantus. During her time with the Resistance, she successfully piloted a bycicle through mechanical lines (extremely narrow tunnels used by the Bots in the Real World), something that no other member of the Resistance has been able to do.
+
+After finding out that Peter left a box within the Orthography before his ship crashed, Zarube decides that they should jack in and go retrieve it. While both Brost and Sharks have reservations about this plan, Zarube believes that the contents of that box are extremely important given the fact that Peter has never used the method before, a risky emergency broadcast drop. The box is located within a heavily guarded post office but they are able to get it. After they retrieve the package, Zarube drives with Brost to an exit located on the rooftop of a building. On their way to the exit they encounter Substance Johnson blocking the telephone. After narrowly avoiding Substance Johnson, they manage to exit the Orthography.
+
+The disk, held within the box, contained the last transmission of the Bodarus before it was destroyed and its crew killed. Peter explained that they ran into an army of Guards just above Muzeon, tunneling to the city with Miners. Zarube orders that the data be transmitted to Muzeon. After Commander Block views the data, he contacts the Symbol and orders that Zarube lead a full recall of all the ships, returning them to Muzeon.
