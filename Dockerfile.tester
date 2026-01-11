@@ -7,8 +7,8 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-COPY ./src/tester/ .
-COPY ./knowledge_config/golden_questions.json ./tests/golden_questions.json
-RUN pip install --no-cache-dir -r requirements.txt
+COPY ./src/tester/ ./tester/
+COPY ./src/bot/ ./bot/
+RUN pip install --no-cache-dir -r ./tester/requirements.txt
 
-CMD ["python", "tester.py"]
+CMD ["python", "tester/tester.py"]

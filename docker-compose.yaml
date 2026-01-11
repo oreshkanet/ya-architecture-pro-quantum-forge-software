@@ -150,17 +150,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.tester
-    entrypoint: ["python", "tester.py"]
+    entrypoint: ["python", "tester/tester.py"]
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - SCHEMA_PATH=/app/data/index_schema.json
     volumes:
+      - ./knowledge_config:/app/tests:ro
       - ./volumes:/app/data
+      - ./volumes/tester:/app/result
     depends_on:
       chroma:
         condition: service_healthy
-    # Запускается вручную: `docker-compose run --rm tester`
+    # Запускается вручную: `docker-compose run --rm tester --results /app/result/test_result.json`
 
 # =============== Анализ логов ===============
   analyzer:

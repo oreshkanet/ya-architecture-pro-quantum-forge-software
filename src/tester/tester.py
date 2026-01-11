@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 
 # Добавляем путь к src/bot для импорта модулей
 project_root = Path(__file__).parent.parent
-bot_path = project_root / "src" / "bot"
+bot_path = project_root / "bot"
 sys.path.insert(0, str(bot_path))
 
 # Импорты с учётом структуры проекта (как в http_api.py)
