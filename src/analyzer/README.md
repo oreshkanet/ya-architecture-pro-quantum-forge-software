@@ -6,23 +6,23 @@
 
 ```bash
 # Анализ логов за последние 7 дней
-python3 src/analyzer/analyze_logs.py
+python3 src/analyzer/analyzer.py
 
 # Анализ логов из конкретного файла
-python3 src/analyzer/analyze_logs.py --log-file /volumes/bot_logs/query_analytics.jsonl
+python3 src/analyzer/analyzer.py --log-file /volumes/bot_logs/query_analytics.jsonl
 ```
 
 ## Запуск анализа логов с параметрами
 
 ```bash
 # Анализ за последние 30 дней
-python3 src/analyzer/analyze_logs.py --days 30
+python3 src/analyzer/analyzer.py --days 30
 
 # Показать топ-20 запросов
-python3 src/analyzer/analyze_logs.py --top 20
+python3 src/analyzer/analyzer.py --top 20
 
 # Не показывать неотвеченные запросы
-python3 src/analyzer/analyze_logs.py --no-unanswered
+python3 src/analyzer/analyzer.py --no-unanswered
 ```
 
 ## Пример вывода

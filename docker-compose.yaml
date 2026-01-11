@@ -167,7 +167,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.analyzer
-    entrypoint: ["python", "analyzer.py"]
+    entrypoint: ["python", "analyzer/analyzer.py"]
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000

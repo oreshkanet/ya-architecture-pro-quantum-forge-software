@@ -7,6 +7,9 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-COPY ./src/analyzer/ .
+COPY ./src/analyzer/ ./analyzer/
+COPY ./src/bot/ ./bot/
 
-CMD ["python", "analyzer.py"]
+RUN pip install --no-cache-dir -r ./bot/requirements.txt
+
+CMD ["python", "analyzer/analyzer.py"]

@@ -16,7 +16,7 @@ from typing import Dict, Any, List
 
 # Добавляем путь к src/bot для импорта модулей
 project_root = Path(__file__).parent.parent
-bot_path = project_root / "src" / "bot"
+bot_path = project_root / "bot"
 sys.path.insert(0, str(bot_path))
 
 from core.query_logger import QueryLogger

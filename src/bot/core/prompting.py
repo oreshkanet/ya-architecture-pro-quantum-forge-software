@@ -51,7 +51,7 @@ def build_prompt(query: str, context_chunks: List[Dict], max_len: int = 4096) ->
         if total_len + len(text) > max_len:
             break
         meta = chunk.get("metadata", {})
-        prefix = f"[{i+1} | {meta.get('entity_type', '?')} | {meta.get('system', 'Matrix')}]: "
+        prefix = f"[{i+1} | {meta.get('entity_type', '?')} | {meta.get('system', 'Orthography')}]: "
         context_lines.append(prefix + text)
         total_len += len(text)
 
