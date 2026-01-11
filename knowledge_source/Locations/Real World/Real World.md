@@ -109,5 +109,3 @@ Neo chose to sacrifice himself, taking into himself all the evil infesting the w
 ## Peace
 
 Simultaneously Neo's code was disseminated and used to re-insert the prime program, reloading the Matrix, correcting all the errors and getting rid of all the remains of the virus, freeing all the humans and programs from the infestation. By sacrificing his own life, Neo managed to destroy this evil, and bring about genuine peace between humanity and the machines, with the power of his love, for a time. The machines agreed to let the humans travel between the real world and the world of the Matrix freely. They could now live in either world, it was their choice. The peace did not last forever though as Neo's endeavors cause a Machine Civil war due to power scarcities. The machines had possession of Neo's and Trinity's bodies after the event of Revolutions and were able to revive them in a facility created specifically for that purpose, The Anomaleum, where they were subjected to torture and testing for the next iteration of The Matrix which they were inserted into to appease the power demands of the machines.
-
-

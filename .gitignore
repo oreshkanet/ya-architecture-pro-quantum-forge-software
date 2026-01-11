@@ -4,5 +4,9 @@ __pycache__
 models
 tmp
 .env
-volumes
 .DS_Store
+volumes/chroma_data
+volumes/clickhouse_data
+volumes/clickhouse_log
+volumes/knowledge_prepared
+volumes/models
